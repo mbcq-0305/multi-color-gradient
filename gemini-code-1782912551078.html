@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Phối & Chuyển Màu (Color Palette Generator)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f5f7fb;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-group {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #475569;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .color-inputs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 450px; /* Tăng nhẹ để chứa bảng màu */
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .color-row {
+            display: flex;
+            flex-direction: column; /* Đổi thành cột để chứa bảng màu vuông bên dưới */
+            gap: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .color-row-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .color-row span {
+            font-weight: bold;
+            min-width: 70px;
+        }
+
+        /* CSS MỚI: Định dạng cho bảng màu vuông iro.js */
+        .custom-picker-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 5px;
+            width: 100%;
+        }
+
+        /* Khi lên điện thoại, ép bảng màu vuông to ra chiếm 85% màn hình */
+        @media (max-width: 480px) {
+            .IroColorPicker {
+                width: 85vw !important;
+                max-width: 320px;
+            }
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .btn-generate {
+            grid-column: 1 / -1;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-generate:hover {
+            background: #357abd;
+        }
+
+        .result-section {
+            margin-top: 20px;
+        }
+
+        .palette-container {
+            display: flex;
+            width: 100%;
+            height: 150px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .color-card {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+            transition: flex-grow 0.3s ease, transform 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .color-card:hover {
+            flex-grow: 1.5;
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        .color-card .hex-tooltip {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .color-card:hover .hex-tooltip {
+            opacity: 1;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            background: #2ecc71;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 10;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Công Cụ Tạo Dải Màu Chuyển Sắc</h1>
+
+    <div class="controls-section">
+        <div class="control-group">
+            <h3>1. Chọn Màu Gốc</h3>
+            <div style="margin-bottom: 15px;">
+                <label for="num-anchors">Số lượng màu muốn chuyển (Màu gốc):</label>
+                <input type="number" id="num-anchors" min="2" max="10" value="3">
+            </div>
+            <div id="color-inputs" class="color-inputs-container"></div>
+        </div>
+
+        <div class="control-group" style="display: flex; flex-direction: column; justify-content: flex-start;">
+            <h3>2. Thiết Lập Kết Quả</h3>
+            <div>
+                <label for="num-steps">Số lượng ô màu hiển thị ở kết quả:</label>
+                <input type="number" id="num-steps" min="3" max="64" value="10">
+            </div>
+            <p style="margin-top: 20px; color: #64748b; font-size: 14px; line-height: 1.6;">
+                💡 <b>Mẹo:</b> Bạn có thể nhập mã màu dạng <code>#FFFFFF</code> hoặc <code>rgb(255, 255, 255)</code> trực tiếp vào ô văn bản, hoặc kéo chấm tròn trên bảng màu vuông. Nhấp vào bất kỳ ô màu nào ở kết quả để sao chép mã HEX nhanh chóng!
+            </p>
+        </div>
+
+        <button class="btn-generate" onclick="generatePalette()">TẠO DẢI MÀU (GENERATE)</button>
+    </div>
+
+    <div class="result-section">
+        <h3 style="margin-bottom: 15px; color: #475569;">Kết quả: Dải ô màu (Color Palette)</h3>
+        <div id="palette" class="palette-container"></div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Đã copy mã màu thành công!</div>
+
+<script>
+    const colorInputsContainer = document.getElementById('color-inputs');
+    const numAnchorsInput = document.getElementById('num-anchors');
+    const numStepsInput = document.getElementById('num-steps');
+    const paletteContainer = document.getElementById('palette');
+    const toast = document.getElementById('toast');
+
+    let defaultColors = ['#ff7675', '#74b9ff', '#a29bfe'];
+    let iroPickers = []; // Mảng lưu trữ các đối tượng bảng màu iro.js
+
+    initAnchorInputs();
+    generatePalette();
+
+    numAnchorsInput.addEventListener('change', function() {
+        let val = parseInt(this.value);
+        if (val < 2) this.value = 2;
+        if (val > 10) this.value = 10;
+        initAnchorInputs();
+        generatePalette();
+    });
+
+    numStepsInput.addEventListener('input', generatePalette);
+
+    function initAnchorInputs() {
+        const count = parseInt(numAnchorsInput.value);
+        colorInputsContainer.innerHTML = '';
+        iroPickers = []; // Reset mảng picker
+
+        for (let i = 0; i < count; i++) {
+            const colorValue = defaultColors[i] || getRandomColor();
+            if(!defaultColors[i]) defaultColors.push(colorValue);
+
+            const row = document.createElement('div');
+            row.className = 'color-row';
+
+            // Tạo cấu trúc HTML mới: ô text ở trên, bảng màu vuông ở dưới
+            row.innerHTML = `
+                <div class="color-row-top">
+                    <span>Màu ${i + 1}:</span>
+                    <input type="text" value="${colorValue}" data-index="${i}" oninput="updateColorFromText(this)" placeholder="#HEX hoặc rgb()">
+                </div>
+                <div class="custom-picker-container">
+                    <div id="iro-picker-${i}"></div>
+                </div>
+            `;
+            colorInputsContainer.appendChild(row);
+
+            // Khởi tạo bảng màu iro.js dạng hình vuông (Box) cho từng ô màu
+            const iroPicker = new iro.ColorPicker(`#iro-picker-${i}`, {
+                width: 180, // Kích thước mặc định trên PC
+                color: colorValue,
+                layout: [
+                    {
+                        component: iro.ui.Box, // Ép hiển thị bảng màu vuông
+                    },
+                    {
+                        component: iro.ui.Slider,
+                        options: { sliderType: 'value' } // Thanh trượt độ sáng tối nằm ngay dưới bảng vuông
+                    }
+                ]
+            });
+
+            // Lắng nghe sự kiện kéo chọn màu trên bảng vuông iro.js
+            iroPicker.on('color:change', function(color) {
+                const textInput = colorInputsContainer.querySelectorAll('input[type="text"]')[i];
+                textInput.value = color.hexString.toUpperCase();
+                defaultColors[i] = color.hexString;
+                generatePalette();
+            });
+
+            iroPickers.push(iroPicker);
+        }
+    }
+
+    // Đồng bộ từ Text input sang bảng màu vuông iro.js
+    function updateColorFromText(textInput) {
+        const idx = parseInt(textInput.getAttribute('data-index'));
+        const iroPicker = iroPickers[idx];
+        let val = textInput.value.trim();
+
+        if (val.toLowerCase().startsWith('rgb')) {
+            let hex = rgbToHex(val);
+            if (hex && iroPicker) {
+                iroPicker.color.set(hex);
+                defaultColors[idx] = hex;
+                generatePalette();
+            }
+        } else {
+            if (!val.startsWith('#') && val.length === 6) {
+                val = '#' + val;
+            }
+            if (/^#[0-9A-F]{6}$/i.test(val) && iroPicker) {
+                iroPicker.color.set(val);
+                defaultColors[idx] = val;
+                generatePalette();
+            }
+        }
+    }
+
+    function getRandomColor() {
+        return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    }
+
+    function rgbToHex(rgbStr) {
+        let match = rgbStr.match(/\d+/g);
+        if (match && match.length >= 3) {
+            let r = parseInt(match[0]), g = parseInt(match[1]), b = parseInt(match[2]);
+            if (r<=255 && g<=255 && b<=255) {
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+            }
+        }
+        return null;
+    }
+
+    function convertToRgbArray(colorStr) {
+        if (colorStr.startsWith('#')) {
+            let r = parseInt(colorStr.slice(1, 3), 16);
+            let g = parseInt(colorStr.slice(3, 5), 16);
+            let b = parseInt(colorStr.slice(5, 7), 16);
+            return [r, g, b];
+        } else if (colorStr.toLowerCase().startsWith('rgb')) {
+            let match = colorStr.match(/\d+/g);
+            if (match) return [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
+        }
+        return [0, 0, 0];
+    }
+
+    function rgbToHexStr(r, g, b) {
+        return "#" + ((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1).toUpperCase();
+    }
+
+    function generatePalette() {
+        paletteContainer.innerHTML = '';
+        const totalSteps = parseInt(numStepsInput.value);
+        
+        const textInputs = colorInputsContainer.querySelectorAll('input[type="text"]');
+        let anchors = [];
+        textInputs.forEach(input => {
+            anchors.push(convertToRgbArray(input.value));
+        });
+
+        const numSegments = anchors.length - 1;
+
+        for (let i = 0; i < totalSteps; i++) {
+            let globalT = i / (totalSteps - 1);
+            if (totalSteps === 1) globalT = 0;
+
+            let segment = Math.floor(globalT * numSegments);
+            if (segment >= numSegments) segment = numSegments - 1;
+
+            let localT = (globalT * numSegments) - segment;
+
+            let colorStart = anchors[segment];
+            let colorEnd = anchors[segment + 1];
+
+            let r = colorStart[0] + (colorEnd[0] - colorStart[0]) * localT;
+            let g = colorStart[1] + (colorEnd[1] - colorStart[1]) * localT;
+            let b = colorStart[2] + (colorEnd[2] - colorStart[2]) * localT;
+
+            let currentHex = rgbToHexStr(r, g, b);
+
+            const colorCard = document.createElement('div');
+            colorCard.className = 'color-card';
+            colorCard.style.backgroundColor = currentHex;
+            
+            colorCard.innerHTML = `<span class="hex-tooltip">${currentHex}</span>`;
+
+            colorCard.addEventListener('click', () => {
+                navigator.clipboard.writeText(currentHex).then(() => {
+                    showToast(`Đã sao chép: ${currentHex}`);
+                });
+            });
+
+            paletteContainer.appendChild(colorCard);
+        }
+    }
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>
